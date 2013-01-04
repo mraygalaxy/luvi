@@ -5,9 +5,6 @@
  */
 void init_codec(Context * ctx, AVCodecContext * CodecCtx, int slave)
 {
-        AVCodecContext *icodec, *codec;
-            uint64_t extra_size;
-	
 	CodecCtx->bit_rate              	= ctx->configuration.video_bit_rate;
 	CodecCtx->width                 	= ctx->configuration.width;
 	CodecCtx->height                	= ctx->configuration.height;
@@ -106,8 +103,8 @@ int init_out(Context * ctx, int slave)
 	 */
 	avcodec_get_context_defaults3(ctx->outVideoCodecCtx, ctx->outVideoCodec);
 	av_opt_set(ctx->outVideoCodecCtx->priv_data, "tune", "zerolatency", 0);
-	av_opt_set(ctx->outVideoCodecCtx->priv_data, "preset", "ultrafast", 0);
-//	av_opt_set(ctx->outVideoCodecCtx->priv_data, "preset", "slow", 0);
+//	av_opt_set(ctx->outVideoCodecCtx->priv_data, "preset", "ultrafast", 0);
+	av_opt_set(ctx->outVideoCodecCtx->priv_data, "preset", "slow", 0);
 	av_opt_set(ctx->outVideoCodecCtx->priv_data, "x264opts", "weightp=0:vbv-maxrate=40000:vbv-bufsize=30000:keyint=30:keyint_min=1:fake-interlaced=1:intra-refresh=0:slices=4:colorprim=bt709:transfer=bt709:colormatrix=bt709:level=4.1", 0);
 
         init_codec(ctx, ctx->outVideoCodecCtx, slave);
@@ -447,9 +444,10 @@ void destroy_ctx_out(Context * ctx)
 
 int cmdsend(int fd, void * buf, Command * cmd) 
 {
-	char * desc = describe[cmd->code];
-	int ret;
-	unsigned short len = command__get_packed_size(cmd), nlen = htons(len);
+	char 	      *	desc = describe[cmd->code];
+	int 		ret;
+	unsigned short 	len = command__get_packed_size(cmd), 
+			nlen = htons(len);
 
 	if(len > MAX_MSG_SIZE) {
 		printf("send protobuf is too big for buffer %u: %s fd %d\n", len, desc, fd);

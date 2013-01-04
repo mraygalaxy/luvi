@@ -14,6 +14,7 @@ AC_PROG_INSTALL
 
 CFLAGS="$CFLAGS -I/usr/local/include"
 LDFLAGS="$LDFLAGS -L/usr/local/lib"
+CFLAGS="`echo $CXXFLAGS | sed -e 's|-O2||'`"
 
 AC_CHECK_PROG(PROTOBUF, protoc-c, protoc-c)
 
