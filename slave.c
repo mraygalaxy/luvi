@@ -1,87 +1,93 @@
 #include "luvi.h"
 
-Context * ctx;
-
-static void transcode_and_transmit(queue_entry_t * e)
+static void * video_transcoder(void * opaque)
 {
-	Convert 	convert;
+	Context 	* ctx = opaque;
+	queue_entry_t   * e;
+
+	while(1) {
+		if(!(e = pop(ctx->in_fifo, &ctx->stop_in_consumer)))
+			break;
+
+		// transcoding parameters for this frame
+		protobuf_to_packet(&e->save_packet, e->recv->convert->packet);
+
+		// go!
+		e->got_packet = transcode(ctx, e, e->recv->convert, &e->save_packet);
+
+		/* 
+		 * Free the original data. Resulting coded frame is
+		 * stored in e->outBuffers
+		 */
+		av_free_packet(&e->save_packet);
+
+		push(ctx->out_fifo, e);
+        }
+}
+
+static void * network_writer(void * opaque)
+{
+	Context 	* ctx = opaque;
+	queue_entry_t   * e;
 	Command 	send;
+	Convert 	convert;
 	uint8_t		buf[MAX_MSG_SIZE];
-	int 		x, 
+	int		x,
 			ret;
 
-	/* 
-	 * Packet data has been previous allocated.
-         * Prepare response area before transcoding.
-         */
-	command__init(&send);	
-	convert__init(&convert);
 
-	// Original parameters sent by master 
-	send.convert = &convert;
+	while(1) {
+		if(!(e = pop(ctx->out_fifo, &ctx->stop_out_consumer)))
+			break;
 
-	// transcoding parameters for this frame
-	protobuf_to_packet(&e->save_packet, e->recv->convert->packet);
+		/* 
+		 * Packet data has been previous allocated.
+		 * Prepare response area.
+		 */
+		command__init(&send);	
+		send.convert = &convert;
+		convert__init(&convert);
 
-	// go!
-	e->got_packet = transcode(ctx, e, e->recv->convert, &e->save_packet);
+		// prepare response to master
+		send.convert->buffers = e->recv->convert->buffers;
+		send.convert->extra_frame_count = e->recv->convert->extra_frame_count;
+		send.convert->frame_number = e->recv->convert->frame_number;
+		send.convert->n_frame_count = e->recv->convert->n_frame_count;
 
-	// prepare response to master
-	send.convert->buffers = e->recv->convert->buffers;
-	send.convert->extra_frame_count = e->recv->convert->extra_frame_count;
-	send.convert->frame_number = e->recv->convert->frame_number;
-	send.convert->n_frame_count = e->recv->convert->n_frame_count;
+		store_transcode_result(&send, e);
 
-	store_transcode_result(&send, e);
+		// if transcoding produced a frame, send the corresponding buffers
+		if(e->recv->convert->do_not_reply == 0) {
+			// Tell master what this is
+			send.code = TRANSCODE_RESULT;
+			cmdsend(e->fd, buf, &send);
 
-	/* 
-	 * Free the original data. Resulting coded frame is
-         * stored in e->outBuffers
-	 */
-	av_free_packet(&e->save_packet);
-
-	// if transcoding produced a frame, send the corresponding buffers
-	if(e->recv->convert->do_not_reply == 0) {
-		// Tell master what this is
-		send.code = TRANSCODE_RESULT;
-		cmdsend(e->fd, buf, &send);
-
-		if(e->got_packet) {
-			/* Send raw data */
-			for(x = 0; x < send.convert->buffers; x++) {
-				ret = multiwrite(e->fd, e->outBuffers[x], e->buffer_lengths[x]);	
-				if(ret <= 0) {
-					perror("write");
-					printf("Failed to send output packet payloads.\n");
-					exit(1);
+			if(e->got_packet) {
+				/* Send raw data */
+				for(x = 0; x < send.convert->buffers; x++) {
+					ret = multiwrite(e->fd, e->outBuffers[x], e->buffer_lengths[x]);	
+					if(ret <= 0) {
+						perror("write");
+						printf("Failed to send output packet payloads.\n");
+						exit(1);
+					}
 				}
 			}
 		}
-	}
 
-	for(x = 0; x < send.convert->buffers; x++)
-		av_free(e->outBuffers[x]);
+		for(x = 0; x < send.convert->buffers; x++)
+			av_free(e->outBuffers[x]);
 
-	command__free_unpacked(e->recv, NULL);
-}
-
-static void * network_writer (void * opaque)
-{
-	queue_entry_t * e;
-
-	while(1) {
-		if(!(e = pop(ctx->fifo, &ctx->stop_consumer)))
-			break;
-
-		transcode_and_transmit(e);
+		command__free_unpacked(e->recv, NULL);
 		free(e);
         }
 }
 
 int main(int argc, char * argv[]) {
-	Command 		* cmd, 
+	Command 	       * cmd, 
 			  	send;
-        struct sockaddr_in 	raddr;
+        struct addrinfo        * raddr;
+	struct sockaddr_in      saddr;
         int 			rport, 
 				fd, 
 				ret,
@@ -91,7 +97,7 @@ int main(int argc, char * argv[]) {
 	char 			rip[20];
         pthread_t 		pro;
 	uint8_t			buf[MAX_MSG_SIZE];
-
+	Context               * ctx;
 
 	ctx = malloc(sizeof(Context));
 
@@ -99,11 +105,14 @@ int main(int argc, char * argv[]) {
 		return -1;
 
         if(argc < 3) {
-            printf("Usage: <master ip> <port>\n");
+            printf("Usage: <master address / ip> <port>\n");
             exit(1);
         }
 
-        strcpy(rip, argv[1]);
+	raddr = gethost(argv[1]);
+        strcpy(rip, inet_ntoa(((struct sockaddr_in *) raddr->ai_addr)->sin_addr));
+	printf("%s mapped to %s\n", argv[1], rip);
+
         rport = atoi(argv[2]);
 
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
@@ -111,12 +120,12 @@ int main(int argc, char * argv[]) {
 		exit(1);
 	}
 
-	bzero(&raddr, sizeof(raddr));
-        raddr.sin_family      = AF_INET;
-        raddr.sin_addr.s_addr = inet_addr(rip);
-        raddr.sin_port        = htons(rport); /* daytime server */
+	bzero(&saddr, sizeof(saddr));
+        saddr.sin_family      = AF_INET;
+        saddr.sin_addr.s_addr = inet_addr(rip);
+        saddr.sin_port        = htons(rport); /* daytime server */
 
-	if(connect(fd, (struct sockaddr *) &raddr, sizeof(struct sockaddr_in)) < 0) {
+	if(connect(fd, (struct sockaddr *) &saddr, sizeof(struct sockaddr_in)) < 0) {
 		perror("connect");
 		exit(1);
 	} 
@@ -137,12 +146,12 @@ int main(int argc, char * argv[]) {
 		exit(1);
 	}
 
-
 	printf("== connected %d with buffer %d %d\n", fd, sendbuff, rcvbuff);
 
 	// Announce ourselves to the master and ask for work to do
 	command__init(&send);
 	send.code = INIT;
+	send.name = ctx->hostname;
 	ret = cmdsend(fd, buf, &send);
 	ret = cmdrecv(fd, buf, &cmd, CODEC);
 	memcpy(&ctx->configuration, cmd->configuration, sizeof(Config)); 
@@ -154,7 +163,8 @@ int main(int argc, char * argv[]) {
 	if(init_out(ctx, 1) < 0)
 		return -1;
 
-        pthread_create (&ctx->consumer, NULL, network_writer, &fd);
+        pthread_create (&ctx->in_consumer, NULL, video_transcoder, ctx);
+        pthread_create (&ctx->out_consumer, NULL, network_writer, ctx);
 
 	// Run until there is no more work to do
 	while(1) {
@@ -185,14 +195,14 @@ int main(int argc, char * argv[]) {
 		multirecv(fd, e->save_packet.data, size);
 
 		// Send to FIFO for transcoding
-		push(ctx->fifo, e);
+		push(ctx->in_fifo, e);
 	}
 
 	// Wait for remaining transcodes to complete
-	consumer_stop(ctx);
+	in_consumer_stop(ctx);
+	out_consumer_stop(ctx);
 	printf("Finished!\n");
 	close(fd);
-	destroy_ctx_in(ctx);
-	destroy_ctx_out(ctx);
-	free(ctx);
+	destroy_ctx(ctx);
+        freeaddrinfo(raddr);
 }

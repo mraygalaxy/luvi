@@ -17,6 +17,7 @@
 #include <libswscale/swscale.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <netdb.h>
 #include <xdo.h>
 //#define NDEBUG
 #include <assert.h>
@@ -71,7 +72,8 @@ typedef struct {
 	int	ranges;
 	int	busy;
 	queue	* results;
-	char	ip[20];
+	char	ip[30];
+	char 	name[100];
 	uint8_t sbuf[MAX_MSG_SIZE];
 	uint8_t rbuf[MAX_MSG_SIZE];
 } slave_t;
@@ -144,13 +146,15 @@ struct QUEUE {
  */ 
 typedef struct {
 	Config		  configuration;
-	pthread_t	  consumer;
+	pthread_t	  in_consumer;
+	pthread_t	  out_consumer;
 	pthread_t	  listener;
 	int64_t		  start_time;
 	int		  processors;
 	int		  audioStream;
 	int		  videoStream;
-	int 		  stop_consumer;
+	int 		  stop_in_consumer;
+	int 		  stop_out_consumer;
 	int 		  stop_listener;
 	int		  ready_for_slaves;
 	int		  drops_stopped;
@@ -162,10 +166,12 @@ typedef struct {
 	void		* staging;
 	int		  num_slaves;
 	int		  ranges;
+	char		  hostname[100];
 	xdo_t		* xdo;
 	slave_t		  slaves[MAX_SLAVES];
 	slave_t		* curr_slave;
-        queue 		* fifo;
+        queue 		* in_fifo;
+        queue 		* out_fifo;
 	AVFormatContext * inFormatCtx;
 	AVFormatContext * outFormatCtx;
 	AVCodecContext  * outVideoCodecCtx;
@@ -197,6 +203,7 @@ int 		init_out(Context * ctx, int slave);
 void 		init_codec(Context * ctx, AVCodecContext * outVideoCodecCtx, int slave);
 void 		destroy_ctx_in(Context * ctx);
 void 		destroy_ctx_out(Context * ctx);
+void 		destroy_ctx(Context * ctx);
 
 /*
  * Actual transcoding routines
@@ -225,5 +232,9 @@ void 		queueDel (queue *q, queue_entry_t **out);
 void 		push(queue * fifo, queue_entry_t * e);
 queue_entry_t * pop(queue * fifo, int * stop);
 queue_entry_t * queueHead(queue *q);
+void 		in_consumer_stop(Context * ctx);
+void 		out_consumer_stop(Context * ctx);
+
+struct addrinfo * gethost(char * name);
 
 #endif

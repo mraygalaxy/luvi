@@ -58,4 +58,5 @@ message Command {
 	required int32 code=1;
 	optional Convert convert=2;
 	optional Config configuration=3;
+	optional string name = 4;
 }

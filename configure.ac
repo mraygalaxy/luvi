@@ -34,6 +34,7 @@ AC_CHECK_LIB([avcodec], [av_log], [], [AC_MSG_ERROR([-lavcodec missing: install 
 AC_CHECK_LIB([z], [inflate], [], [AC_MSG_ERROR([-lz missing? wtf?])])
 AC_CHECK_LIB([avformat], [av_log], [], [AC_MSG_ERROR([-lavformat missing: install ffmpeg/avconv libraries])])
 
+AC_CHECK_HEADERS([netdb.h], [], [AC_MSG_ERROR(["netdb.h: you don't have enough development headers"])])
 AC_CHECK_HEADERS([sys/socket.h], [], [AC_MSG_ERROR(["sys/socket.h: you don't have enough development headers"])])
 AC_CHECK_HEADERS([sys/types.h], [], [AC_MSG_ERROR(["sys/types.h: you don't have enough development headers"])])
 AC_CHECK_HEADERS([netinet/in.h], [], [AC_MSG_ERROR(["arpa/inet.h: you don't have enough development headers"])])

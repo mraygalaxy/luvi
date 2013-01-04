@@ -15,6 +15,22 @@ void init_codec(Context * ctx, AVCodecContext * CodecCtx, int slave)
 	CodecCtx->time_base.den         	= ctx->configuration.avg_frame_rate_num;
 }
 
+struct addrinfo * gethost(char * name)
+{
+	struct addrinfo       * info, * result;
+	int s;
+
+	s = getaddrinfo(name, NULL, NULL, &result);
+
+	if(s != 0 || result == NULL) {
+		perror("getaddrinfo");
+		printf("Failed to lookup address: %s\n", name);
+		exit(1);
+	}
+
+	return result;
+}
+
 /*
  * Open the output codec, supporting frame and configure it to our liking.
  */
@@ -168,12 +184,36 @@ int init_in(Context * ctx, int slave)
         return 0;
 }
 
+void destroy_ctx(Context * ctx)
+{
+	int x;
+
+	if(ctx->xdo)
+		xdo_free(ctx->xdo);
+
+	for(x = 0; x < MAX_SLAVES; x++)
+		queueDelete(ctx->slaves[x].results);
+
+	queueDelete (ctx->in_fifo);
+	queueDelete (ctx->out_fifo);
+
+	destroy_ctx_out(ctx); 
+	destroy_ctx_in(ctx);
+
+	free(ctx);
+}
 /*
  * Default settings for private master/slave variables.
  */
 int init_ctx(Context * ctx, int queuesize)
 {
 	int x;
+
+	if(gethostname(ctx->hostname, 100) != 0) {
+		perror("gethostname");
+		printf("Failed to get my own hostname =(");
+		return -1;
+	}
 
 	config__init(&ctx->configuration);
 	
@@ -188,6 +228,8 @@ int init_ctx(Context * ctx, int queuesize)
 	ctx->videoStream = -1;
 	ctx->audioStream = -1;
 	ctx->xdo = xdo_new(":0.0");
+	if(ctx->xdo)
+		xdo_keysequence(ctx->xdo, CURRENTWINDOW, "Shift_L", 0);
 	ctx->curr_slave = NULL;
 	ctx->num_slaves = 0;
 	ctx->ready_for_slaves = 0;
@@ -197,14 +239,21 @@ int init_ctx(Context * ctx, int queuesize)
 	//ctx->encoder_clean = 0;
 	ctx->encoder_clean = 1;
 
-	ctx->stop_consumer = 0;
+	ctx->stop_in_consumer = 0;
+	ctx->stop_out_consumer = 0;
 	ctx->stop_listener = 0;
 	ctx->first_keyframe_reached = 0;
 	av_register_all();
 
-	ctx->fifo = queueInit (queuesize);
-        if (ctx->fifo == NULL) {
-                printf("main: Queue Init failed.\n");
+	ctx->in_fifo = queueInit (queuesize);
+        if (ctx->in_fifo == NULL) {
+                printf("main: Input Queue Init failed.\n");
+                exit (1);
+        }
+
+	ctx->out_fifo = queueInit (queuesize);
+        if (ctx->out_fifo == NULL) {
+                printf("main: Output Queue Init failed.\n");
                 exit (1);
         }
 
@@ -387,7 +436,7 @@ int transcode(Context * ctx, queue_entry_t * e, Convert * convert, AVPacket * pa
 		    e->dts[z] = e->pts[z];
 
 		    if(debug == 2)
-		    printf("MUX: (%" PRId64 ") queue %d, Writing video frame with PTS: %" PRId64 " DTS %" PRId64 ".\n", frame_number, ctx->fifo->size, e->pts[z], e->dts[z]);
+		    printf("MUX: (%" PRId64 ") queue %d, Writing video frame with PTS: %" PRId64 " DTS %" PRId64 ".\n", frame_number, ctx->in_fifo->size, e->pts[z], e->dts[z]);
 
 		    if((frame_number % (int) ctx->configuration.avg_framerate) == 0) {
 			    /*
@@ -402,7 +451,7 @@ int transcode(Context * ctx, queue_entry_t * e, Convert * convert, AVPacket * pa
 			    printf("\r(%1.1f %%) (%" PRId64 ") queue %d dups %ld single %ld drops %ld", 
 					(frame_number / ctx->configuration.expected_total_frames) * 100, 
 					frame_number,
-					ctx->fifo->size,
+					ctx->in_fifo->size,
 					dups, single, drops);
 			    printf(" (size=%5d) pts %" PRId64 " dts %" PRId64 " ", e->buffer_lengths[z], e->pts[z], e->dts[z]);
 			    printf(" decode %ld encode %ld =======", decode, encode);
@@ -739,11 +788,18 @@ void push(queue * fifo, queue_entry_t * e)
 	pthread_cond_signal(fifo->notEmpty);
 }
 
-void consumer_stop(Context * ctx)
+void in_consumer_stop(Context * ctx)
 {
-	  ctx->stop_consumer = 1;
-	  pthread_cond_signal(ctx->fifo->notEmpty);
-          pthread_join(ctx->consumer, NULL);
+	  ctx->stop_in_consumer = 1;
+	  pthread_cond_signal(ctx->in_fifo->notEmpty);
+          pthread_join(ctx->in_consumer, NULL);
+}
+
+void out_consumer_stop(Context * ctx)
+{
+	  ctx->stop_out_consumer = 1;
+	  pthread_cond_signal(ctx->out_fifo->notEmpty);
+          pthread_join(ctx->out_consumer, NULL);
 }
 
 queue_entry_t * pop(queue * fifo, int * stop) 

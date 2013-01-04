@@ -63,17 +63,17 @@ static void output_video(Context * ctx, queue_entry_t * e, Command * cmd)
 			outpkt.dts = cmd->convert->values->dts[x];
 			outpkt.flags = cmd->convert->values->flags[x];
 
-		        if(ctx->remote && (debug==2 || (ctx->fifo->size % 40) == 0)) {
+		        if(ctx->remote && (debug==2 || (ctx->in_fifo->size % 40) == 0)) {
 				printf("(%d %%) (%d) Writing from slave %d (%s), ranges %d size %d frame %d total ranges %d queue %d =======\n",  
 					(int) (((double) ctx->configuration.frame_number / (double) ctx->configuration.expected_total_frames) * 100), 
 					ctx->configuration.frame_number,
 					e->slave ? e->slave->id : -1, 
-					e->slave ? e->slave->ip : "n/a",
+					e->slave ? e->slave->name : "n/a",
 					e->slave ? e->slave->ranges : -1, 
 					outpkt.size, 
 					ctx->configuration.frame_number, 
 					ctx->ranges,
-					ctx->fifo->size);
+					ctx->in_fifo->size);
 
 				if(debug==2)
 					printf("\n");
@@ -149,7 +149,7 @@ static void * disk_writer (void * opaque)
 		/* Are we still waiting for the head? */
 		if(!e) {
 			/* No? Get the next one */
-			if(!(e = pop(ctx->fifo, &ctx->stop_consumer)))
+			if(!(e = pop(ctx->in_fifo, &ctx->stop_in_consumer)))
 				break;
 		}
 
@@ -169,6 +169,8 @@ static void * disk_writer (void * opaque)
 
 		do {
 			ready = my_select(ctx, &socks, 1); 
+			if(!ready)
+				printf("Timeout.\n");
 		} while(e == NULL && ready == 0 && abort_requested == 0);
 
 		if(ready) {
@@ -203,7 +205,10 @@ static void * disk_writer (void * opaque)
 				push(slave->results, data);
 				slave->busy--;
 			}
-		}
+		} else
+			printf("Timeout, checking queues: %p\n", e);
+
+		ready = 0;
 
 		/* 
 		 * Check to see if the head matches any of the
@@ -229,7 +234,7 @@ static void * disk_writer (void * opaque)
 			free(e);
 			y = -1;
 			do {
-				if(!(e = pop(ctx->fifo, &check_only)))
+				if(!(e = pop(ctx->in_fifo, &check_only)))
 					break;
 				if(e->type == ctx->audioStream) {
 					output_audio(ctx, e);
@@ -288,6 +293,7 @@ void *slave_listener(void * opaque)
 
 		slave = &(ctx->slaves[ctx->num_slaves]);
 		got = cmdrecv(newsockd, slave->rbuf, &recv, INIT);
+		strcpy(slave->name, recv->name);
 		command__free_unpacked(recv, NULL);
 
 		printf("Sending codec id %d\n", ctx->configuration.video_codec_id);
@@ -497,7 +503,7 @@ int main(int argc, char *argv[]) {
 	m_ptsOffset = av_rescale_q(ctx->start_time, ctx->inVideoStream->time_base, myAVTIMEBASEQ);
 	printf("expected: %f duration: %" PRId64 " offset: %" PRId64 ", start %" PRId64 ", orig_start %" PRId64 "\n", ctx->configuration.expected_total_frames, ctx->inVideoStream->duration, m_ptsOffset, ctx->start_time, ctx->inVideoStream->start_time);
 
-        pthread_create (&ctx->consumer, NULL, disk_writer, ctx);
+        pthread_create (&ctx->in_consumer, NULL, disk_writer, ctx);
 	
 	while(1) {
 	   if(abort_requested)
@@ -555,14 +561,14 @@ int main(int argc, char *argv[]) {
 
 				if(ctx->curr_slave == NULL) {
 					ctx->curr_slave = &ctx->slaves[0];
-					printf("\nSlave %d (%s) is ready for more work...\n", ctx->curr_slave->id, ctx->curr_slave->ip);
+					printf("\nSlave %d (%s) is ready for more work...\n", ctx->curr_slave->id, ctx->curr_slave->name);
 				} else {
 					if(icount == RANGESIZE && ctx->inPacket.flags & AV_PKT_FLAG_KEY) {
 						int p;
 						icount = 0;
 						slave_t * not_busy = NULL, * curr;
 						do {
-							int print = ((ctx->fifo->size % 5) == 0);
+							int print = ((ctx->in_fifo->size % 5) == 0);
 							//my_select(ctx, &socks, 0);
 							
 							for(p = 0; p < ctx->num_slaves; p++) {
@@ -571,15 +577,15 @@ int main(int argc, char *argv[]) {
 									//if(!FD_ISSET(curr->fd, &socks)) {
 									//	printf("\nSlave %d (%s) is ready buffer is FULLLLLLLLLLL...\n", p, curr->ip);
 									//} else {
-										printf("\nSlave %d (%s) is ready for more work...\n", p, curr->ip);
+										printf("\nSlave %d (%s) is ready for more work...\n", p, curr->name);
 										not_busy = curr;
 									//}
 								}
 								if(print)
-								printf("Slave %d, queue %d, (%s) computed ranges %d frames remaining this range: %d\n",
+								printf("Slave %d, (%s), queue %d computed ranges, %d frames remaining this range: %d\n",
 									curr->id,
+									curr->name,
 									curr->results->size,	
-									curr->ip,
 									curr->ranges,
 									curr->busy);
 							}
@@ -593,7 +599,7 @@ int main(int argc, char *argv[]) {
 							}
 
 							if(print)
-							printf("All slaves busy, queue %d\n", ctx->fifo->size);
+							printf("All slaves busy, queue %d\n", ctx->in_fifo->size);
 							usleep(500000);
 						} while(not_busy == NULL);
 					}
@@ -647,8 +653,8 @@ int main(int argc, char *argv[]) {
 				} else if(icount == 0) {
 					if(ctx->inPacket.flags & AV_PKT_FLAG_KEY) {
 						if(gop_length > 0) {
-							printf("\nRetransmitting scene-change GOP @ %" PRId64 ", packets: %d, to slave: %d (%s)\n",
-								gop_entries[0].cmd.convert->packet->pts, gop_length, e->slave->id, e->slave->ip);
+							printf("\nRetransmit scene-change GOP @ %" PRId64 ", packets: %d, to slave: %d (%s)\n",
+								gop_entries[0].cmd.convert->packet->pts, gop_length, e->slave->id, e->slave->name);
 
 							for(y = 0; y < gop_length; y++) {
 								queue_entry_t * ge = &gop_entries[y];
@@ -664,8 +670,6 @@ int main(int argc, char *argv[]) {
 								
 								av_free_packet(&ge->save_packet);
 							}
-							if(debug==2)
-							printf("Retransmit complete\n");
 							gop_length = 0;
 						}
 					}
@@ -691,7 +695,7 @@ int main(int argc, char *argv[]) {
 			if(ctx->remote && ctx->ready_for_slaves) {
 				if(ctx->curr_slave)
 					ctx->curr_slave->busy++;
-				push(ctx->fifo, e);
+				push(ctx->in_fifo, e);
 			} else {
 				if(debug==2)
 				printf("skipping producer, outputting now.\n");
@@ -719,7 +723,7 @@ int main(int argc, char *argv[]) {
 			assert(e);
 			e->save_packet = ctx->inPacket;
 			e->type = ctx->inPacket.stream_index;
-			push(ctx->fifo, e);
+			push(ctx->in_fifo, e);
 		} else {
 			/* free unknown packet */ 
 			av_free_packet(&ctx->inPacket);
@@ -727,7 +731,7 @@ int main(int argc, char *argv[]) {
 		
 	}
 	printf("Stopping consumer.\n");
-	consumer_stop(ctx);
+	in_consumer_stop(ctx);
 
 	if(ctx->remote) {
 		int idx;
@@ -775,11 +779,7 @@ int main(int argc, char *argv[]) {
 		av_freep(&ctx->outFormatCtx->streams[x]);
 	}
 
-	destroy_ctx_out(ctx); 
-	queueDelete (ctx->fifo);
-	destroy_ctx_in(ctx);
 	avformat_close_input(&ctx->inFormatCtx);
-	free(ctx);
-
+	destroy_ctx(ctx);
 	return 0;
 }

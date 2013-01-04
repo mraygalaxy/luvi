@@ -32,6 +32,9 @@ Usage is fairly manual right now.... a GUI would be a logical next step.
 		# The last parameter:
 			'1' means: transcode in parallel using slaves
 			'0' means: transcode locally (for debugging purposes)
+	Example:
+	
+	$ ./master input.mpg output.m2ts 1264 1 # start and wait for slaves
 
    At this point, the master will print:
 
@@ -42,11 +45,19 @@ Usage is fairly manual right now.... a GUI would be a logical next step.
 
 2. Then, on as many computers as you have, run the slaves, like this:
 
-	$ ./slave [ ip address of master ] [ port # ]
+	$ ./slave [ address/name of master ] [ port # ]
 
-3. If 
+	Example:
 
-Then the transcoding process should begin.
+	$ ./slave localhost 1264 # connect to master and start working
+
+3. If you just want to make sure the encoding *works* first locally
+   without any parallelism (for example to make sure you have the right
+   ffmpeg libraries installed):
+
+	Example:
+
+	$ ./master input.mpg output.m2ts 1264 0  # will transcode immediately without slaves
 
 CONFIGURING:
 =============================================
