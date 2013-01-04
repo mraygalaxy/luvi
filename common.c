@@ -202,7 +202,7 @@ int init_ctx(Context * ctx, int queuesize)
 	ctx->first_keyframe_reached = 0;
 	av_register_all();
 
-	ctx->fifo = queueInit (QUEUESIZE);
+	ctx->fifo = queueInit (queuesize);
         if (ctx->fifo == NULL) {
                 printf("main: Queue Init failed.\n");
                 exit (1);

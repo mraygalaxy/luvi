@@ -103,40 +103,38 @@ static void setnonblocking(int sock)
 	}
 }
 
-static void my_select(Context * ctx, fd_set * socks, int read)
+static int my_select(Context * ctx, fd_set * socks, int read)
 {
-	int highest = 0, x, ready, y, check_only = 1;
+	int highest = 0, x, y, check_only = 1, ready;
 	struct timeval timeout;
 
-	do {
-		highest = 0;
-		FD_ZERO(socks);
+	highest = 0;
+	FD_ZERO(socks);
 
-		for(x = 0; x < ctx->num_slaves; x++) {
-			int fd = ctx->slaves[x].fd;
-			if(fd > highest)
-				highest = fd;
-			FD_SET(fd, socks);
-		}
+	for(x = 0; x < ctx->num_slaves; x++) {
+		int fd = ctx->slaves[x].fd;
+		if(fd > highest)
+			highest = fd;
+		FD_SET(fd, socks);
+	}
 
-		timeout.tv_sec = 2;
-		timeout.tv_usec = 0;
+	timeout.tv_sec = 2;
+	timeout.tv_usec = 0;
 
+	if(read)
+		ready = select(highest + 1, socks, NULL, NULL, &timeout);
+	else
+		ready = select(highest + 1, NULL, socks, NULL, &timeout);
+
+	if (ready < 0) {
 		if(read)
-			ready = select(highest + 1, socks, NULL, NULL, &timeout);
+			perror("select read");
 		else
-			ready = select(highest + 1, NULL, socks, NULL, &timeout);
+			perror("select write");
+		exit(1);
+	}
 
-		if (ready < 0) {
-			if(read)
-				perror("select read");
-			else
-				perror("select write");
-			exit(1);
-		}
-	} while(ready == 0);
-
-	//return ready;
+	return ready;
 }
 
 static void * disk_writer (void * opaque)
@@ -145,8 +143,9 @@ static void * disk_writer (void * opaque)
 	Context * ctx = opaque;
 	int x, y, check_only = 1;
 	fd_set socks;
+	int ready;
 
-	while(1) {
+	while(abort_requested == 0) {
 		/* Are we still waiting for the head? */
 		if(!e) {
 			/* No? Get the next one */
@@ -168,41 +167,48 @@ static void * disk_writer (void * opaque)
 			continue;
 		}
 
-		my_select(ctx, &socks, 1);
+		do {
+			ready = my_select(ctx, &socks, 1); 
+		} while(e == NULL && ready == 0 && abort_requested == 0);
 
-		for(y = 0; y < ctx->num_slaves; y++) {
-			slave_t * slave = &ctx->slaves[y];
-			queue_entry_t * data;
-			int fd = slave->fd;
+		if(ready) {
+			for(y = 0; y < ctx->num_slaves; y++) {
+				slave_t * slave = &ctx->slaves[y];
+				queue_entry_t * data;
+				int fd = slave->fd;
 
-			if(!FD_ISSET(fd, &socks))
-				continue;
+				if(!FD_ISSET(fd, &socks))
+					continue;
 
-			data = malloc(ENTRYSIZE);
-			assert(data);
-			cmdrecv(fd, slave->rbuf, &data->recv, TRANSCODE_RESULT);
-			data->slave = slave;
-			data->type = ctx->videoStream;
+				if(slave->results->size == (slave->results->max - 1))
+					continue;
 
-			for(x = 0; x < data->recv->convert->buffers; x++) {
-				if(debug==2)
-				printf("Receiving %d bytes for slave %d\n", data->recv->convert->values->buffer_lengths[x], slave->id);
-				data->outBuffers[x] = av_malloc(data->recv->convert->values->buffer_lengths[x]);
-				assert(data->outBuffers[x]);
-				if(multirecv(fd, data->outBuffers[x], data->recv->convert->values->buffer_lengths[x]) <= 0) {
-					printf("Could not receive %d bytes for slave %d\n", data->recv->convert->values->buffer_lengths[x], slave->id);
-					exit(1);
+				data = malloc(ENTRYSIZE);
+				assert(data);
+				cmdrecv(fd, slave->rbuf, &data->recv, TRANSCODE_RESULT);
+				data->slave = slave;
+				data->type = ctx->videoStream;
+
+				for(x = 0; x < data->recv->convert->buffers; x++) {
+					if(debug==2)
+					printf("Receiving %d bytes for slave %d\n", data->recv->convert->values->buffer_lengths[x], slave->id);
+					data->outBuffers[x] = av_malloc(data->recv->convert->values->buffer_lengths[x]);
+					assert(data->outBuffers[x]);
+					if(multirecv(fd, data->outBuffers[x], data->recv->convert->values->buffer_lengths[x]) <= 0) {
+						printf("Could not receive %d bytes for slave %d\n", data->recv->convert->values->buffer_lengths[x], slave->id);
+						exit(1);
+					}
 				}
-			}
 
-			push(slave->results, data);
-			slave->busy--;
+				push(slave->results, data);
+				slave->busy--;
+			}
 		}
 
-		/* Check to see if the head matches any of the
-		   data being currently held
+		/* 
+		 * Check to see if the head matches any of the
+		 * data being currently held.
 		 */
-				
 		for(y = 0; y < ctx->num_slaves; y++) {
 			slave_t * slave = &ctx->slaves[y];
 			queue_entry_t * head = queueHead(slave->results);
@@ -336,7 +342,7 @@ int main(int argc, char *argv[]) {
 	rport = atoi(argv[3]);
 	ctx->remote = atoi(argv[4]);
 
-	if(init_ctx(ctx, 10 * QUEUESIZE) < 0)
+	if(init_ctx(ctx, 20000) < 0)
 		return -1;
 
 	if(ctx->remote) {

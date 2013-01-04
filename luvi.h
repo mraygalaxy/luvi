@@ -32,8 +32,8 @@
 #define MAX_SLAVES 		10		// arbitrary, can be increased
 #define MAX_PACKET 		1000000		// maximum I-frame size
 #define MAX_DUPS 		10		// maximum duplicated packets between timebases
-#define QUEUESIZE 		20000 		// maximum outstanding I/O to slaves
-#define RANGESIZE 		30		// maximum GOPs per slave to transcode (Range) 
+#define QUEUESIZE 		4000 		// maximum outstanding I/O to slaves
+#define RANGESIZE 		10		// maximum GOPs per slave to transcode (Range) 
 #define MAX_EXPECTED_GOP_SIZE	300 		// maximum frames per GOP
 #define MAX_STAGING	 	32*1024*1024	// not used	
 #define NETWORK_BUFFER		1000000		// setsockopt buffer size
