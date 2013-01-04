@@ -1,0 +1,61 @@
+message Config
+{
+	required int32 video_codec_id=1;
+	required int32 video_bit_rate=2;
+	required int32 width=3;
+	required int32 height=4;
+	required int32 frame_number=5;
+	required float avg_framerate=6;
+	required float expected_total_frames=7; 
+	required int32 avg_frame_rate_num=8;
+	required int32 avg_frame_rate_den=9;
+	required int32 sample_aspect_ratio_num=10;
+	required int32 sample_aspect_ratio_den=11;
+	required int32 stream_time_base_num=12;
+	required int32 stream_time_base_den=13;
+	required int32 audio_codec_id=14;
+	required int32 audio_sample_rate=15;
+	required int32 audio_sample_format=16;
+	required int32 audio_channels=17;
+	required int32 audio_bit_rate=18;
+	required int32 audio_frame_size=19;
+	required int32 audio_service_type=20;
+	required int32 audio_block_align=21;
+}
+
+message Packet
+{
+	required int64 pts=1;
+	required int64 dts=2;
+	required int32 size=3;
+	required int32 stream_index=4;
+	required int32 flags=5;
+	required int32 duration=6;
+	required int64 pos=7;
+	required int64 convergence_duration=8; 
+}
+
+message Values
+{
+	repeated int32 buffer_lengths=1;
+	repeated int64 pts=2;
+	repeated int64 dts=3;
+	repeated int32 flags=4;
+}
+
+message Convert {
+	required int32 do_not_reply=1;
+	required int32 finished=2;
+	required int32 n_frame_count=3;
+	required int32 extra_frame_count=4;
+	required int32 buffers=5;
+	required int32 frame_number=6;
+	optional Packet packet=8;
+	optional Values values=7;
+}
+
+message Command {
+	required int32 code=1;
+	optional Convert convert=2;
+	optional Config configuration=3;
+}

@@ -1,0 +1,7 @@
+ChangeLog:
+
+(01/1/2013), Version 1.0:
+* Working version of parallel master/slave x264 transcoding using ffmpeg libraries
+* Bottlenecks seem to be all worked out and packets are properly distributed to all the slaves 
+* Network throughput between master/slave is within tolerance (around 400-600 megabits/second)
+* Audio/Video is copied with correct timestamps, but needs another quick (-c copy) pass through ffmpeg
