@@ -18,10 +18,10 @@ luvi.pb-c.c: luvi.proto
 	$(PROTOBUFCMD) --c_out=. luvi.proto
 
 luvi_master: master.c $(SOURCES) $(PROTOSOURCES)
-	$(CC) $(CFLAGS) -o luvi_master master.c $(INCLUDE) $(SOURCES) $(PROTOSOURCES) $(LIBS) $(LDFLAGS)
+	$(CC) -g $(CFLAGS) -o luvi_master master.c $(INCLUDE) $(SOURCES) $(PROTOSOURCES) $(LIBS) $(LDFLAGS)
 
 luvi_slave: slave.c $(SOURCES) $(PROTOSOURCES)
-	$(CC) $(CFLAGS) -o luvi_slave slave.c $(INCLUDE) $(SOURCES) $(PROTOSOURCES) $(LIBS) $(LDFLAGS)
+	$(CC) -g $(CFLAGS) -o luvi_slave slave.c $(INCLUDE) $(SOURCES) $(PROTOSOURCES) $(LIBS) $(LDFLAGS)
 
 clean:
 	rm -f $(EXECUTABLES) $(PROTOSOURCES) luvi.pb-c.h
