@@ -28,10 +28,10 @@ USAGE:
 Usage is fairly manual right now.... a GUI would be a logical next step.
 
 1. Run the master like this:
-
+   
      $ ./master [ input video filename ] [ output.m2ts ] [ port # to which slaves should connect ] [ 0 | 1 ]
     
-# The last parameter:
+The last parameter:
 			'1' means: transcode in parallel using slaves
 			'0' means: transcode locally (for debugging purposes)
 	Example:
@@ -39,9 +39,13 @@ Usage is fairly manual right now.... a GUI would be a logical next step.
      $ ./master input.mpg output.m2ts 1264 1 # start and wait for slaves
 
 At this point, the master will print:
+
     Ready for slaves.
+    
     Waiting for slaves...
+    
     Waiting for slaves...
+    
     Waiting for slaves...
 
 2. Then, on as many computers as you have, run the slaves, like this:
