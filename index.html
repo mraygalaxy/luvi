@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Luvi : Luvi: A distributed parallel video transcoder" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Luvi</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/hinesmr/luvi">View on GitHub</a>
+
+          <h1 id="project_title">Luvi</h1>
+          <h2 id="project_tagline">Luvi: A distributed parallel video transcoder</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/hinesmr/luvi/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/hinesmr/luvi/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>Luvi: A distributed parallel video transcoder</h1>
+
+<p>This program opens your input movie, streams the frames out to 
+multiple computers (slaves), transcodes them in parallel, 
+returns the transcoded frames back to the master computer and 
+saves the resulting video to a new file.</p>
+
+<p>Originally, the intent of this program was to take my MythTV 
+recordings and use the computers in my house in parallel to convert 
+them them to a high-quality Bluray-compatible format in a much 
+faster time than a single computer could do.</p>
+
+<h1>DEPENDENCIES:</h1>
+
+<p>A) ffmpeg 1.0 and higher: Compile or install them however you see fit
+B) x264: The only codec supported right now for transcoding. With additional help, this can easily be improved.
+C) Protocol Buffers: google's data exchange format for network communication
+D) libxdo2: A nice library used to keep the computers from going to sleep while they video is being farmed out for transcoding.</p>
+
+<h1>USAGE:</h1>
+
+<p>Usage is fairly manual right now.... a GUI would be a logical next step.</p>
+
+<ol>
+<li>
+<p>Run the master like this:</p>
+
+<p>$ ./master [ input video filename ] [ output.m2ts ] [ port # to which slaves should connect ] [ 0 | 1 ]</p>
+
+<h1>The last parameter:</h1>
+
+<pre><code>    '1' means: transcode in parallel using slaves
+    '0' means: transcode locally (for debugging purposes)
+</code></pre>
+
+<p>Example:</p>
+
+<p>$ ./master input.mpg output.m2ts 1264 1 # start and wait for slaves</p>
+
+<p>At this point, the master will print:
+Ready for slaves.
+Waiting for slaves...
+Waiting for slaves...
+Waiting for slaves...</p>
+</li>
+<li>
+<p>Then, on as many computers as you have, run the slaves, like this:</p>
+
+<p>$ ./slave [ address/name of master ] [ port # ]</p>
+
+<p>Example:</p>
+
+<p>$ ./slave localhost 1264 # connect to master and start working</p>
+</li>
+<li>
+<p>If you just want to make sure the encoding <em>works</em> first locally
+without any parallelism (for example to make sure you have the right
+ffmpeg libraries installed):</p>
+
+<p>Example:</p>
+
+<p>$ ./master input.mpg output.m2ts 1264 0  # will transcode immediately without slaves</p>
+</li>
+</ol><h1>CONFIGURING:</h1>
+
+<p>Things like x264 bitrates, profiles, presets, GOP sizes, and so forth
+are all hard-coded inside "common.c".</p>
+
+<p>Eventually a configuration system will get written when I have free time.</p>
+
+<p>Feel free to modify (common.c) the file until that time comes....</p>
+
+<p>Patches welcome =)</p>
+
+<h1>HOW IT WORKS:</h1>
+
+<p>Parallelism works by grouping multiple GOPs together (currently almost 1000 frames,
+spanning about 45-60 frames/GOP on average from the videos I've tested with) 
+into "ranges" of GOPs.</p>
+
+<p>Each "range" of GOPs is assigned to a slave. The range includes a "scene-change" GOP from
+the previous range which ensures that encoding is done cleanly between the slaves. This
+is done by retaining the last GOP of a range and sending it along to the next slave when
+the next slave is chosen.</p>
+
+<p>Everything happens in a single pass: All the video is transcoded in the same order
+that it was read from the original video and written back out to the new video in that same
+order. This is done by ordering the transcoded ranges into a FIFO while they are multiplexed
+across all the slaves.</p>
+
+<p>The audio is just copied, right now. It is not transcoded.</p>
+
+<p>The resulting video is written to an MPEG Transport Stream container.</p>
+
+<h1>BUGS:</h1>
+
+<p>No bugs with the video transcoding or synchronization.</p>
+
+<p>The audio copying is weird: It plays back fine in VLC / Mplayer on my desktop,
+but unless I to do the following to get the audio stream to function
+properly on a Bluray Disk (tsMuxeR won't accept it):</p>
+
+<p>By doing the following:</p>
+
+<pre><code>$ ffmpeg -i output.m2ts -vcodec copy -acodec copy -f mpegts -copyts result.m2ts
+</code></pre>
+
+<p>This some how "sanitizes" the copied audio stream in a way that I don't 
+understand, but makes the audio stream compatible for Bluray. Perhaps someone 
+could help me track down the problem in my code when I copy the audio packets.</p>
+
+<h1>PATCHES / Reporting Bugs:</h1>
+
+<p>If you find a bug <em>cough</em> segfault <em>cough</em>,
+please for god's sake, run GDB first.</p>
+
+<p>Patches welcome!</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Luvi maintained by <a href="https://github.com/hinesmr">hinesmr</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
