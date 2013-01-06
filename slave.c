@@ -14,6 +14,7 @@ static void * video_transcoder(void * opaque)
 
 		// go!
 		e->got_packet = transcode(ctx, e, e->recv->convert, &e->save_packet);
+		update_fps(ctx, 0);
 
 		/* 
 		 * Free the original data. Resulting coded frame is
@@ -165,6 +166,8 @@ int main(int argc, char * argv[]) {
 
         pthread_create (&ctx->in_consumer, NULL, video_transcoder, ctx);
         pthread_create (&ctx->out_consumer, NULL, network_writer, ctx);
+
+	update_fps(ctx, 1);
 
 	// Run until there is no more work to do
 	while(1) {

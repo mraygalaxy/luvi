@@ -73,8 +73,7 @@ typedef struct {
 	int	busy;
 	queue	* results;
 	char	ip[30];
-	char 	name[100];
-	uint8_t sbuf[MAX_MSG_SIZE];
+	char 	name[100]; uint8_t sbuf[MAX_MSG_SIZE];
 	uint8_t rbuf[MAX_MSG_SIZE];
 } slave_t;
 
@@ -166,6 +165,7 @@ typedef struct {
 	void		* staging;
 	int		  num_slaves;
 	int		  ranges;
+	double		  fps;
 	char		  hostname[100];
 	xdo_t		* xdo;
 	slave_t		  slaves[MAX_SLAVES];
@@ -236,5 +236,6 @@ void 		in_consumer_stop(Context * ctx);
 void 		out_consumer_stop(Context * ctx);
 
 struct addrinfo * gethost(char * name);
+void update_fps(Context * ctx, int init);
 
 #endif

@@ -1,5 +1,5 @@
 # initial information about the project
-AC_PREREQ([2.68])
+AC_PREREQ([2.67])
 AC_INIT([luvi],[1.0],[michael@hinespot.com])
 
 # check if the source folder is available

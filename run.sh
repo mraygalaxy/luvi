@@ -2,14 +2,22 @@
 
 # Just a helper script for running stuff
 
-#file="../st.mpg"
+#file="../orig.mpg"
 #file="../st.m2ts"
-file="/storage/recordings_readable/bytitle/Star Trek- First Contact/20121004-2100-2330- Untitled.mpg"
+#file="/storage/recordings_readable/bytitle/Star Trek- First Contact/20121004-2100-2330- Untitled.mpg"
+file="/storage/recordings_readable/bytitle/Star Trek- the Motion Picture/20121211-1530-1830- Untitled.mpg"
 #file="sample.mpg"
 #file="sample2.mpg"
 #file="sample3.mpg"
 
-video=~/mythtv_to_dvd/luvi/output.m2ts
+#dir=$(echo "$file" | grep -oE ".*\/")
+dir=/storage/transcode/
+sudo chmod 777 "$dir"
+
+video="${dir}output.m2ts"
+
+echo "input: $file"
+echo "output: $video"
 
 if [ x"$1" != xslave ] ; then
 	rm -f "$video"

@@ -115,13 +115,14 @@ int init_out(Context * ctx, int slave)
 	}
 
 	/*
-	 * Blu-ray parameters from the internet. =)
+	 * Mmmmm.... let's make a bluray disc.
 	 */
 	avcodec_get_context_defaults3(ctx->outVideoCodecCtx, ctx->outVideoCodec);
+//	av_opt_set(ctx->outVideoCodecCtx->priv_data, "tune", "film", 0);
 	av_opt_set(ctx->outVideoCodecCtx->priv_data, "tune", "zerolatency", 0);
 //	av_opt_set(ctx->outVideoCodecCtx->priv_data, "preset", "ultrafast", 0);
-	av_opt_set(ctx->outVideoCodecCtx->priv_data, "preset", "slow", 0);
-	av_opt_set(ctx->outVideoCodecCtx->priv_data, "x264opts", "weightp=0:vbv-maxrate=40000:vbv-bufsize=30000:keyint=30:keyint_min=1:fake-interlaced=1:intra-refresh=0:slices=4:colorprim=bt709:transfer=bt709:colormatrix=bt709:level=4.1", 0);
+	av_opt_set(ctx->outVideoCodecCtx->priv_data, "preset", "veryslow", 0);
+	av_opt_set(ctx->outVideoCodecCtx->priv_data, "x264opts", "bluray-compat=1:tff=1:vbv-maxrate=40000:vbv-bufsize=30000:keyint=30:open-gop=1:fake-interlaced=1:slices=4:colorprim=bt709:transfer=bt709:colormatrix=bt709:level=4.1", 0);
 
         init_codec(ctx, ctx->outVideoCodecCtx, slave);
 
@@ -225,6 +226,7 @@ int init_ctx(Context * ctx, int queuesize)
 		ctx->slaves[x].results = queueInit (QUEUESIZE);
 	}
 
+	ctx->fps = 0;
 	ctx->videoStream = -1;
 	ctx->audioStream = -1;
 	ctx->xdo = xdo_new(":0.0");
@@ -454,7 +456,7 @@ int transcode(Context * ctx, queue_entry_t * e, Convert * convert, AVPacket * pa
 					ctx->in_fifo->size,
 					dups, single, drops);
 			    printf(" (size=%5d) pts %" PRId64 " dts %" PRId64 " ", e->buffer_lengths[z], e->pts[z], e->dts[z]);
-			    printf(" decode %ld encode %ld =======", decode, encode);
+			    printf(" decode %ld encode %ld fps %f =======", decode, encode, ctx->fps);
 			    fflush(stdout);
 		    }
 
@@ -819,5 +821,36 @@ queue_entry_t * pop(queue * fifo, int * stop)
 	pthread_mutex_unlock (fifo->mut);
 	pthread_cond_signal (fifo->notFull);
 	return e;
+}
+
+void update_fps(Context * ctx, int init)
+{
+	static struct timeval start, stop, diff;
+	static long frames = 0, oldframes = 0;
+
+	if(init) {
+		gettimeofday(&start, NULL);
+		return;
+	}
+
+	frames++;
+
+	if((frames % 1000) == 0) {
+		gettimeofday(&stop, NULL);
+		timersub(&stop, &start, &diff);
+		if(diff.tv_sec > 0) {
+			double time = ((double) USEC(diff)) / 1000000.0;
+			double total = frames - oldframes; 
+			ctx->fps = total / time;
+			printf("%f frames per second %f %f.\n", 
+				ctx->fps,
+				time,
+				total);
+		} else {
+			printf("differences is zero.\n");
+		}
+		oldframes = frames;
+		start = stop;
+	}
 }
 

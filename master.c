@@ -64,7 +64,7 @@ static void output_video(Context * ctx, queue_entry_t * e, Command * cmd)
 			outpkt.flags = cmd->convert->values->flags[x];
 
 		        if(ctx->remote && (debug==2 || (ctx->in_fifo->size % 40) == 0)) {
-				printf("(%d %%) (%d) Writing from slave %d (%s), ranges %d size %d frame %d total ranges %d queue %d =======\n",  
+				printf("(%d %%) (%d) Writing from slave %d (%s), ranges %d size %d frame %d total ranges %d queue %d fps %f =======\n",  
 					(int) (((double) ctx->configuration.frame_number / (double) ctx->configuration.expected_total_frames) * 100), 
 					ctx->configuration.frame_number,
 					e->slave ? e->slave->id : -1, 
@@ -73,7 +73,8 @@ static void output_video(Context * ctx, queue_entry_t * e, Command * cmd)
 					outpkt.size, 
 					ctx->configuration.frame_number, 
 					ctx->ranges,
-					ctx->in_fifo->size);
+					ctx->in_fifo->size,
+					ctx->fps);
 
 				if(debug==2)
 					printf("\n");
@@ -204,6 +205,7 @@ static void * disk_writer (void * opaque)
 
 				push(slave->results, data);
 				slave->busy--;
+				update_fps(ctx, 0);
 			}
 		} else
 			printf("Timeout, checking queues: %p\n", e);
@@ -504,6 +506,7 @@ int main(int argc, char *argv[]) {
 	printf("expected: %f duration: %" PRId64 " offset: %" PRId64 ", start %" PRId64 ", orig_start %" PRId64 "\n", ctx->configuration.expected_total_frames, ctx->inVideoStream->duration, m_ptsOffset, ctx->start_time, ctx->inVideoStream->start_time);
 
         pthread_create (&ctx->in_consumer, NULL, disk_writer, ctx);
+	update_fps(ctx, 1);
 	
 	while(1) {
 	   if(abort_requested)
@@ -582,7 +585,7 @@ int main(int argc, char *argv[]) {
 									//}
 								}
 								if(print)
-								printf("Slave %d, (%s), queue %d computed ranges, %d frames remaining this range: %d\n",
+								printf("Slave %d, (%s), queue %d, computed ranges %d, frames remaining this range: %d\n",
 									curr->id,
 									curr->name,
 									curr->results->size,	
@@ -599,7 +602,11 @@ int main(int argc, char *argv[]) {
 							}
 
 							if(print)
-							printf("All slaves busy, queue %d\n", ctx->in_fifo->size);
+							printf("(%d %%) (%d) All slaves busy, queue %d, fps: %f\n", 
+								(int) (((double) ctx->configuration.frame_number / (double) ctx->configuration.expected_total_frames) * 100), 
+								ctx->configuration.frame_number,
+								ctx->in_fifo->size,
+								ctx->fps);
 							usleep(500000);
 						} while(not_busy == NULL);
 					}
@@ -688,6 +695,7 @@ int main(int argc, char *argv[]) {
 			} else {
 				if(debug==2) printf("local transcode %" PRId64 "\n", ctx->inPacket.pts);
 				transcode(ctx, e, cmd->convert, &ctx->inPacket);
+				update_fps(ctx, 0);
 				store_transcode_result(&e->cmd, e);
 			}
 
