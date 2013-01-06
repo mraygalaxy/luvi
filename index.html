@@ -45,10 +45,13 @@ faster time than a single computer could do.</p>
 
 <h1>DEPENDENCIES:</h1>
 
-<p>A) ffmpeg 1.0 and higher: Compile or install them however you see fit
-B) x264: The only codec supported right now for transcoding. With additional help, this can easily be improved.
-C) Protocol Buffers: google's data exchange format for network communication
-D) libxdo2: A nice library used to keep the computers from going to sleep while they video is being farmed out for transcoding.</p>
+<p>A) ffmpeg 1.0 and higher: Compile or install them however you see fit</p>
+
+<p>B) x264: The only codec supported right now for transcoding. With additional help, this can easily be improved.</p>
+
+<p>C) Protocol Buffers: google's data exchange format for network communication</p>
+
+<p>D) libxdo2: A nice library used to keep the computers from going to sleep while they video is being farmed out for transcoding.</p>
 
 <h1>USAGE:</h1>
 
@@ -59,23 +62,27 @@ D) libxdo2: A nice library used to keep the computers from going to sleep while 
 <p>Run the master like this:</p>
 
 <p>$ ./master [ input video filename ] [ output.m2ts ] [ port # to which slaves should connect ] [ 0 | 1 ]</p>
+</li>
+</ol><p>The last parameter:
+            '1' means: transcode in parallel using slaves
+            '0' means: transcode locally (for debugging purposes)
+    Example:</p>
 
-<h1>The last parameter:</h1>
-
-<pre><code>    '1' means: transcode in parallel using slaves
-    '0' means: transcode locally (for debugging purposes)
+<pre><code> $ ./master input.mpg output.m2ts 1264 1 # start and wait for slaves
 </code></pre>
 
-<p>Example:</p>
+<p>At this point, the master will print:</p>
 
-<p>$ ./master input.mpg output.m2ts 1264 1 # start and wait for slaves</p>
+<pre><code>Ready for slaves.
 
-<p>At this point, the master will print:
-Ready for slaves.
 Waiting for slaves...
+
 Waiting for slaves...
-Waiting for slaves...</p>
-</li>
+
+Waiting for slaves...
+</code></pre>
+
+<ol>
 <li>
 <p>Then, on as many computers as you have, run the slaves, like this:</p>
 
