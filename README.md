@@ -15,11 +15,20 @@ DEPENDENCIES:
 =============================================
 
 A) ffmpeg 1.0 and higher: Compile or install them however you see fit
+<<<<<<< HEAD
 B) x264: The only codec supported right now for transcoding.
          With additional help, this can easily be improved.
 C) Protocol Buffers: google's data exchange format for network communication
 D) libxdo2: A nice library used to keep the computers from going to sleep
 	    while they video is being farmed out for transcoding.
+=======
+
+B) x264: The only codec supported right now for transcoding. With additional help, this can easily be improved.
+
+C) Protocol Buffers: google's data exchange format for network communication
+
+D) libxdo2: A nice library used to keep the computers from going to sleep while they video is being farmed out for transcoding.
+>>>>>>> 3efb5318c05d75cd0bbd2d0b4985f0211cafb720
 
 
 USAGE:
@@ -27,6 +36,7 @@ USAGE:
 Usage is fairly manual right now.... a GUI would be a logical next step.
 
 1. Run the master like this:
+<<<<<<< HEAD
     	$ ./master [ input video filename ] [ output.m2ts ] [ port # to which slaves should connect ] [ 0 | 1 ]
 
 		# The last parameter:
@@ -50,14 +60,48 @@ Usage is fairly manual right now.... a GUI would be a logical next step.
 	Example:
 
 	$ ./slave localhost 1264 # connect to master and start working
+=======
+   
+     $ ./master [ input video filename ] [ output.m2ts ] [ port # to which slaves should connect ] [ 0 | 1 ]
+    
+The last parameter:
+			'1' means: transcode in parallel using slaves
+			'0' means: transcode locally (for debugging purposes)
+	Example:
+	   
+     $ ./master input.mpg output.m2ts 1264 1 # start and wait for slaves
+
+At this point, the master will print:
+
+    Ready for slaves.
+    
+    Waiting for slaves...
+    
+    Waiting for slaves...
+    
+    Waiting for slaves...
+
+2. Then, on as many computers as you have, run the slaves, like this:
+
+    $ ./slave [ address/name of master ] [ port # ]
+
+	Example:
+	  
+    $ ./slave localhost 1264 # connect to master and start working
+>>>>>>> 3efb5318c05d75cd0bbd2d0b4985f0211cafb720
 
 3. If you just want to make sure the encoding *works* first locally
    without any parallelism (for example to make sure you have the right
    ffmpeg libraries installed):
 
 	Example:
+<<<<<<< HEAD
 
 	$ ./master input.mpg output.m2ts 1264 0  # will transcode immediately without slaves
+=======
+  
+    $ ./master input.mpg output.m2ts 1264 0  # will transcode immediately without slaves
+>>>>>>> 3efb5318c05d75cd0bbd2d0b4985f0211cafb720
 
 CONFIGURING:
 =============================================
