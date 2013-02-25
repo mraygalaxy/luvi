@@ -31,7 +31,7 @@
  */
 
 #define MAX_SLAVES 		10		// arbitrary, can be increased
-#define MAX_PACKET 		1000000		// maximum I-frame size
+#define MAX_PACKET 		1000000		// maximum I-frame byte size
 #define MAX_DUPS 		10		// maximum duplicated packets between timebases
 #define QUEUESIZE 		4000 		// maximum outstanding I/O to slaves
 #define RANGESIZE 		10		// maximum GOPs per slave to transcode (Range) 

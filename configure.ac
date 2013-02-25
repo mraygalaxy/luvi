@@ -26,7 +26,7 @@ fi
 AC_CHECK_LIB([protobuf-c], [protobuf_c_message_pack],[], [AC_MSG_ERROR([-lprotobuf-c missing: apt-get install protobuf-c-compiler libprotobuf-c0-dev])])
 AC_CHECK_LIB([xdo], [xdo_new], [], [AC_MSG_ERROR([-lxdo missing: apt-get install libxdo2 libxdo-dev])])
 AC_CHECK_LIB([va], [vaCreateBuffer], [], [AC_MSG_ERROR([-lva missing: apt-get install libva1 libva-dev])])
-AC_CHECK_LIB([bz2], [BZ2_bzDecompressInit], [], [AC_MSG_ERROR([-lbz2 missing: apt-get install libz2-dev])])
+AC_CHECK_LIB([bz2], [BZ2_bzDecompressInit], [], [AC_MSG_ERROR([-lbz2 missing: apt-get install libbz2-dev])])
 AC_CHECK_LIB([x264], [x264_encoder_headers], [], [AC_MSG_ERROR([-lx264 missing: apt-get install libx264])])
 AC_CHECK_LIB([pthread], [pthread_create], [], [AC_MSG_ERROR([-lpthread missing? wtf?])])
 AC_CHECK_LIB([avutil], [av_log], [], [AC_MSG_ERROR([-lavutil missing: install ffmpeg/avconv libraries])])
@@ -53,6 +53,7 @@ AC_CHECK_HEADERS([libavcodec/avcodec.h], [], [AC_MSG_ERROR([please install the f
 AC_CHECK_HEADERS([libavformat/avformat.h], [], [AC_MSG_ERROR([please install the ffmpeg/avconf libraries and headers])])
 AC_CHECK_HEADERS([libavutil/opt.h], [], [AC_MSG_ERROR([please install the ffmpeg/avconf libraries and headers])])
 AC_CHECK_HEADERS([libswscale/swscale.h], [], [AC_MSG_ERROR([please install the ffmpeg/avconf libraries and headers])])
+AC_CHECK_HEADERS([X11/Xlib.h], [], [AC_MSG_ERROR([X11/Xlib.h missing: apt-get install libx11-dev])])
 AC_CHECK_HEADERS([xdo.h], [], [AC_MSG_ERROR([xdo.h missing: apt-get install libxdo-dev])])
 
 AC_CHECK_FUNCS([bzero gettimeofday inet_ntoa select socket], [], [AC_MSG_ERROR(["you don't have enough development headers"])])

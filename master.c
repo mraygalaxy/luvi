@@ -485,6 +485,13 @@ int main(int argc, char *argv[]) {
 	 ctx->outVideoStream->sample_aspect_ratio.num = ctx->configuration.sample_aspect_ratio_num;
 	 ctx->outVideoStream->sample_aspect_ratio.den = ctx->configuration.sample_aspect_ratio_den;
 
+	 printf("Opening output file: %s\n", argv[2]);
+
+         if(ctx->outFormatCtx->oformat->flags & AVFMT_GLOBALHEADER) {
+		ctx->outVideoCodecCtx->flags |= CODEC_FLAG_GLOBAL_HEADER;
+		ctx->outAudioCodecCtx->flags |= CODEC_FLAG_GLOBAL_HEADER;
+	 }
+
          if (avio_open(&ctx->outFormatCtx->pb, argv[2], AVIO_FLAG_WRITE) < 0) {
 	     printf("Could not open '%s'\n", argv[2]);
 	     return -1;

@@ -37,12 +37,16 @@ struct addrinfo * gethost(char * name)
 int init_out(Context * ctx, int slave)
 {
 	if(slave == 0) {
-		if(avformat_alloc_output_context2(&ctx->outFormatCtx, NULL, "mpegts", NULL) < 0) {
-			printf("Could not allocate output format context from h264\n");
+		//char * container = "mpegts";
+		char * container = "matroska";
+
+		if(avformat_alloc_output_context2(&ctx->outFormatCtx, NULL, container, NULL) < 0) {
+			printf("Could not allocate output format context %s\n", container);
 			return -1;
 		}
+
 		if(!ctx->outFormatCtx) {
-			printf("Could not find suitable output format context from h264\n");
+			printf("Could not find suitable output format context %s\n", container);
 			return -1;
 		}
 	}
@@ -109,20 +113,30 @@ int init_out(Context * ctx, int slave)
 			ctx->outAudioCodecCtx->channels = ctx->configuration.audio_channels;
 			ctx->outAudioCodecCtx->audio_service_type = ctx->configuration.audio_service_type;
 		}
-
-		if(ctx->outFormatCtx->oformat->flags & AVFMT_GLOBALHEADER)
-			ctx->outVideoCodecCtx->flags |= CODEC_FLAG_GLOBAL_HEADER;
 	}
 
 	/*
 	 * Mmmmm.... let's make a bluray disc.
 	 */
+
+	/*
+         *
+	 * THESE SETTINGS WORK LOCAL. TESTED IN PLAYER>
+         *
 	avcodec_get_context_defaults3(ctx->outVideoCodecCtx, ctx->outVideoCodec);
-//	av_opt_set(ctx->outVideoCodecCtx->priv_data, "tune", "film", 0);
 	av_opt_set(ctx->outVideoCodecCtx->priv_data, "tune", "zerolatency", 0);
-//	av_opt_set(ctx->outVideoCodecCtx->priv_data, "preset", "ultrafast", 0);
-	av_opt_set(ctx->outVideoCodecCtx->priv_data, "preset", "veryslow", 0);
-	av_opt_set(ctx->outVideoCodecCtx->priv_data, "x264opts", "bluray-compat=1:tff=1:vbv-maxrate=40000:vbv-bufsize=30000:keyint=30:open-gop=1:fake-interlaced=1:slices=4:colorprim=bt709:transfer=bt709:colormatrix=bt709:level=4.1", 0);
+	av_opt_set(ctx->outVideoCodecCtx->priv_data, "preset", "ultrafast", 0);
+	av_opt_set(ctx->outVideoCodecCtx->priv_data, "x264opts", "bitrate=7000:bluray-compat=1:tff=1:vbv_maxrate=40000:vbv_bufsize=30000:keyint=30:open-gop=1:fake-interlaced=1:slices=4:colorprim=bt709:transfer=bt709:colormatrix=bt709:level=4.1", 0);
+	 */
+
+	/*
+	 * DEVELOPMENT SETTINGS
+         */
+	avcodec_get_context_defaults3(ctx->outVideoCodecCtx, ctx->outVideoCodec);
+	av_opt_set(ctx->outVideoCodecCtx->priv_data, "tune", "zerolatency", 0);
+	av_opt_set(ctx->outVideoCodecCtx->priv_data, "preset", "ultrafast", 0);
+	av_opt_set(ctx->outVideoCodecCtx->priv_data, "x264opts", "bitrate=7000:bluray-compat=1:tff=1:vbv_maxrate=40000:vbv_bufsize=30000:keyint=30:open-gop=1:fake-interlaced=1:slices=4:colorprim=bt709:transfer=bt709:colormatrix=bt709:level=4.1", 0);
+
 
         init_codec(ctx, ctx->outVideoCodecCtx, slave);
 
@@ -445,7 +459,7 @@ int transcode(Context * ctx, queue_entry_t * e, Convert * convert, AVPacket * pa
 			     * Nice library to make sure the slave computer does not go to sleep while we are
 			     * transcoding by simulating a harmless keystroke on the display.
 			     */
-			    if(ctx->xdo && ((frame_number % 300) == 0)) {
+			    if(ctx->xdo && ((frame_number % 10) == 0)) {
 				    printf("\nEmitting shift keypress to keep machine alive\n");
 				    xdo_keysequence(ctx->xdo, CURRENTWINDOW, "Shift_L", 0);
 			    }
