@@ -31,12 +31,16 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-        <h1>Luvi: A distributed parallel video transcoder</h1>
+        <h1>Luvi: A distributed parallel video transcoder [ALPHA, Linux/Unix only currently]</h1>
 
 <p>This program opens your input movie, streams the frames out to 
 multiple computers (slaves), transcodes them in parallel, 
 returns the transcoded frames back to the master computer and 
 saves the resulting video to a new file.</p>
+
+<p>This is alpha code. It currently has only been tested on Ubuntu.</p>
+
+<p>Dependencies listed below.</p>
 
 <p>Originally, the intent of this program was to take my MythTV 
 recordings and use the computers in my house in parallel to convert 
@@ -45,13 +49,11 @@ faster time than a single computer could do.</p>
 
 <h1>DEPENDENCIES:</h1>
 
-<p>A) ffmpeg 1.0 and higher: Compile or install them however you see fit</p>
-
-<p>B) x264: The only codec supported right now for transcoding. With additional help, this can easily be improved.</p>
-
-<p>C) Protocol Buffers: google's data exchange format for network communication</p>
-
-<p>D) libxdo2: A nice library used to keep the computers from going to sleep while they video is being farmed out for transcoding.</p>
+<p>A) ffmpeg 1.0 and higher: Compile or install them however you see fit
+B) x264: The only codec supported right now for transcoding. With additional help, this can easily be improved.
+C) Protocol Buffers: google's data exchange format for network communication
+D) libxdo2: A nice library used to keep the computers from going to sleep
+        while they video is being farmed out for transcoding.</p>
 
 <h1>USAGE:</h1>
 
@@ -61,14 +63,14 @@ faster time than a single computer could do.</p>
 <li>
 <p>Run the master like this:</p>
 
-<p>$ ./master [ input video filename ] [ output.m2ts ] [ port # to which slaves should connect ] [ 0 | 1 ]</p>
+<p>$ ./master [ input video filename ] [ output.mkv ] [ port # to which slaves should connect ] [ 0 | 1 ]</p>
 </li>
 </ol><p>The last parameter:
             '1' means: transcode in parallel using slaves
             '0' means: transcode locally (for debugging purposes)
     Example:</p>
 
-<pre><code> $ ./master input.mpg output.m2ts 1264 1 # start and wait for slaves
+<pre><code> $ ./master input.mpg output.mkv 1264 1 # start and wait for slaves
 </code></pre>
 
 <p>At this point, the master will print:</p>
@@ -99,7 +101,7 @@ ffmpeg libraries installed):</p>
 
 <p>Example:</p>
 
-<p>$ ./master input.mpg output.m2ts 1264 0  # will transcode immediately without slaves</p>
+<p>$ ./master input.mpg output.mkv 1264 0  # will transcode immediately without slaves</p>
 </li>
 </ol><h1>CONFIGURING:</h1>
 
@@ -130,7 +132,7 @@ across all the slaves.</p>
 
 <p>The audio is just copied, right now. It is not transcoded.</p>
 
-<p>The resulting video is written to an MPEG Transport Stream container.</p>
+<p>The resulting video is written to a Matroska container, but that can easily be changed inside the source code. (Clearly additional command line parameters are necessary).</p>
 
 <h1>BUGS:</h1>
 
@@ -142,7 +144,7 @@ properly on a Bluray Disk (tsMuxeR won't accept it):</p>
 
 <p>By doing the following:</p>
 
-<pre><code>$ ffmpeg -i output.m2ts -vcodec copy -acodec copy -f mpegts -copyts result.m2ts
+<pre><code>$ ffmpeg -i output.mkv -vcodec copy -acodec copy -f matroska -copyts result.mkv
 </code></pre>
 
 <p>This some how "sanitizes" the copied audio stream in a way that I don't 
