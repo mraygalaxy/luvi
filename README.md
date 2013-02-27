@@ -1,10 +1,14 @@
-Luvi: A distributed parallel video transcoder
+Luvi: A distributed parallel video transcoder [ALPHA, Linux/Unix only currently]
 =============================================
 
 This program opens your input movie, streams the frames out to 
 multiple computers (slaves), transcodes them in parallel, 
 returns the transcoded frames back to the master computer and 
 saves the resulting video to a new file.
+
+This is alpha code. It currently has only been tested on Ubuntu.
+
+Dependencies listed below.
 
 Originally, the intent of this program was to take my MythTV 
 recordings and use the computers in my house in parallel to convert 
@@ -26,14 +30,14 @@ Usage is fairly manual right now.... a GUI would be a logical next step.
 
 1. Run the master like this:
 
-     $ ./master [ input video filename ] [ output.m2ts ] [ port # to which slaves should connect ] [ 0 | 1 ]
+     $ ./master [ input video filename ] [ output.mkv ] [ port # to which slaves should connect ] [ 0 | 1 ]
     
 The last parameter:
 			'1' means: transcode in parallel using slaves
 			'0' means: transcode locally (for debugging purposes)
 	Example:
 	   
-     $ ./master input.mpg output.m2ts 1264 1 # start and wait for slaves
+     $ ./master input.mpg output.mkv 1264 1 # start and wait for slaves
 
 At this point, the master will print:
 
@@ -59,7 +63,7 @@ At this point, the master will print:
 
 	Example:
   
-    $ ./master input.mpg output.m2ts 1264 0  # will transcode immediately without slaves
+    $ ./master input.mpg output.mkv 1264 0  # will transcode immediately without slaves
 
 CONFIGURING:
 =============================================
@@ -92,7 +96,7 @@ across all the slaves.
 
 The audio is just copied, right now. It is not transcoded.
 
-The resulting video is written to an MPEG Transport Stream container.
+The resulting video is written to a Matroska container, but that can easily be changed inside the source code. (Clearly additional command line parameters are necessary).
 
 BUGS:
 ======================================
@@ -104,7 +108,7 @@ properly on a Bluray Disk (tsMuxeR won't accept it):
 
 By doing the following:
 
-    $ ffmpeg -i output.m2ts -vcodec copy -acodec copy -f mpegts -copyts result.m2ts
+    $ ffmpeg -i output.mkv -vcodec copy -acodec copy -f matroska -copyts result.mkv
 
 This some how "sanitizes" the copied audio stream in a way that I don't 
 understand, but makes the audio stream compatible for Bluray. Perhaps someone 
