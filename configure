@@ -3891,6 +3891,53 @@ fi
 
 #AC_CHECK_LIB([protobuf-c], [protobuf_c_message_pack], [AC_MSG_RESULT([it works it works!!!!!!!!!!!!!])], [AC_MSG_ERROR([-lprotobuf-c missing: apt-get install protobuf-c-compiler libprotobuf-c0-dev])])
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lame_init in -lmp3lame" >&5
+$as_echo_n "checking for lame_init in -lmp3lame... " >&6; }
+if ${ac_cv_lib_mp3lame_lame_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmp3lame  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char lame_init ();
+int
+main ()
+{
+return lame_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_mp3lame_lame_init=yes
+else
+  ac_cv_lib_mp3lame_lame_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mp3lame_lame_init" >&5
+$as_echo "$ac_cv_lib_mp3lame_lame_init" >&6; }
+if test "x$ac_cv_lib_mp3lame_lame_init" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBMP3LAME 1
+_ACEOF
+
+  LIBS="-lmp3lame $LIBS"
+
+else
+  as_fn_error $? "-lmp3lame missing: apt-get install libmp3lame-dev" "$LINENO" 5
+fi
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for floor in -lm" >&5
 $as_echo_n "checking for floor in -lm... " >&6; }
 if ${ac_cv_lib_m_floor+:} false; then :

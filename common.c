@@ -103,8 +103,10 @@ int init_out(Context * ctx, int slave)
 
 			avcodec_copy_context(ctx->outAudioCodecCtx, ctx->inAudioStream->codec);
 
-			av_dict_set(&ctx->outAudioStream->metadata, "language", 
-				av_dict_get(ctx->inAudioStream->metadata, "language", NULL, 0)->value, 0);
+            if (ctx->inAudioStream->metadata) { 
+                av_dict_set(&ctx->outAudioStream->metadata, "language", 
+                    av_dict_get(ctx->inAudioStream->metadata, "language", NULL, 0)->value, 0);
+            }
 
 			ctx->outAudioCodecCtx->sample_rate = ctx->configuration.audio_sample_rate;
 			ctx->outAudioCodecCtx->bit_rate = ctx->configuration.audio_bit_rate;

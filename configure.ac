@@ -23,6 +23,7 @@ if test x"$PROTOBUF" != x"protoc-c" ; then
 fi
 
 #AC_CHECK_LIB([protobuf-c], [protobuf_c_message_pack], [AC_MSG_RESULT([it works it works!!!!!!!!!!!!!])], [AC_MSG_ERROR([-lprotobuf-c missing: apt-get install protobuf-c-compiler libprotobuf-c0-dev])])
+AC_CHECK_LIB([mp3lame], [lame_init], [], [AC_MSG_ERROR([-lmp3lame missing: apt-get install libmp3lame-dev])])
 AC_CHECK_LIB([m], [floor], [], [AC_MSG_ERROR([-lm missing math libraries? what??])])
 AC_CHECK_LIB([protobuf-c], [protobuf_c_message_pack],[], [AC_MSG_ERROR([-lprotobuf-c missing: apt-get install protobuf-c-compiler libprotobuf-c0-dev])])
 AC_CHECK_LIB([xdo], [xdo_new], [], [AC_MSG_ERROR([-lxdo missing: apt-get install libxdo2 libxdo-dev])])
