@@ -1,0 +1,9 @@
+body {
+	padding-top: 60px;
+}
+a.brand:hover {
+	color : white;
+}
+a {
+	font-weight:bold;
+}

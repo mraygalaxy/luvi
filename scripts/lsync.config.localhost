@@ -1,0 +1,1 @@
+sync{delay=0, default.rsyncssh, source="/home/mrhines/luvi-web", targetdir="/tmp/luvi-web", host="ubuntu@localhost"}
